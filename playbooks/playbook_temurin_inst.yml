@@ -1,0 +1,65 @@
+---
+- hosts: clusterk8s
+  become: yes
+  tasks:
+    - name: Installer les paquets prérequis
+      apt:
+        name:
+          - wget
+          - apt-transport-https
+          - gpg
+        state: present
+        update_cache: yes
+
+    - name: Récupérer la clé GPG d'Adoptium
+      ansible.builtin.shell: 
+        cmd: wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor
+      register: gpg_key
+      changed_when: false
+
+    - name: Ajouter la clé GPG d'Adoptium
+      ansible.builtin.copy:
+        content: "{{ gpg_key.stdout }}"
+        dest: /etc/apt/trusted.gpg.d/adoptium.gpg
+        mode: '0644'
+
+    - name: Déterminer le nom de code de la distribution
+      ansible.builtin.command: 
+        cmd: awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release
+      register: version_codename
+      changed_when: false
+
+    - name: Ajouter le dépôt Adoptium
+      ansible.builtin.apt_repository:
+        repo: "deb https://packages.adoptium.net/artifactory/deb {{ version_codename.stdout }} main"
+        filename: adoptium
+        state: present
+
+    - name: Mettre à jour le cache des paquets
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Installer Temurin 21 JDK
+      ansible.builtin.apt:
+        name: temurin-21-jdk
+        state: present
+
+    - name: Configurer les variables d'environnement pour Java et Maven
+      ansible.builtin.blockinfile:
+        path: /etc/profile.d/java_maven_env.sh
+        create: yes
+        mode: '0644'
+        block: |
+          # Java Environment Variables
+          export JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+
+    - name: Vérifier l'installation de Java
+      ansible.builtin.command: java -version
+      register: java_version
+      changed_when: false
+
+    - name: Afficher les versions de Java et Maven
+      ansible.builtin.debug:
+        msg: 
+          - "Java Version: {{ java_version.stderr }}"

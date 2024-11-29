@@ -1,0 +1,15 @@
+---
+- hosts: clusterk8s
+  become: yes
+  tasks:
+    - name: Mise à jour des paquets
+      ansible.builtin.command: 
+        cmd: sudo apt update
+
+    - name: Mise à niveau des paquets
+      ansible.builtin.command: 
+        cmd: sudo apt upgrade -y
+
+    - name: Nettoyage des paquets obsolètes
+      ansible.builtin.command: 
+        cmd: sudo apt autoremove -y
