@@ -40,3 +40,28 @@ Configuration Sudo
         Demande le mot de passe sudo
     become_method=sudo
         Utilise sudo comme méthode d'escalade
+
+--FICHIER inventory:development.ini
+
+Configuration de l'Inventaire Ansible - Inventaire de Développement
+
+Présentation Générale
+
+Le fichier development.ini définit l'inventaire des hôtes pour l'environnement de développement, permettant une gestion centralisée et organisée des ressources.
+
+Structure de l'Inventaire
+
+Groupe Kubernetes
+    [clusterk8s] : Un groupe logique regroupant les hôtes d'un cluster Kubernetes
+
+Définition des Hôtes
+    host1
+        Adresse IP : 192.168.1.12
+        Identifiant de référence dans les playbooks Ansible
+    host2
+        Adresse IP : 192.168.1.13
+        Second nœud du cluster
+
+Paramètres Clés
+    ansible_host : Spécifie l'adresse IP de connexion pour chaque hôte
+    Format : nom_hôte ansible_host=adresse_ip
