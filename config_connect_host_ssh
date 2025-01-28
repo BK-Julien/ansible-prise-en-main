@@ -1,0 +1,32 @@
+# Désactiver l'authentification par mot de passe
+PasswordAuthentication no
+
+# Dans le fichier /etc/ssh/sshd_config.d/*.conf, il faut désactiver
+PasswordAuthentication no
+
+# Interdire la connexion directe en tant que root
+PermitRootLogin no
+
+# Autoriser l'authentification par clé SSH
+PubkeyAuthentication yes
+
+# Désactiver les méthodes d'authentification interactives
+KbdInteractiveAuthentication no
+
+# Désactiver les mots de passe vides
+PermitEmptyPasswords no
+
+# Désactiver, Assurez-vous que PAM est correctement configuré pour ne pas interférer avec vos paramètres SSH.
+UsePAM no
+
+*******************************************************************************************************************************************
+
+# Générer une clé SSH de type ed25519
+ssh-keygen -t ed25519 -f ~/.ssh/custom_keys/id_ed25519 -C "commentaire_personnalise"
+
+# Transférer la clé publique sur le serveur distant
+ssh-copy-id -i ~/.ssh/custom_keys/id_ed25519.pub utilisateur@adresse_du_serveur
+
+# Se connecter en utilisant la clé personnalisée
+# Se connecter en root 
+ssh -i ~/.ssh/custom_keys/id_ed25519 utilisateur@adresse_du_serveur
