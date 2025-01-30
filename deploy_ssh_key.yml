@@ -1,0 +1,8 @@
+- name: Déployer la clé SSH sur les serveurs
+  hosts: clusterk8s
+  tasks:
+    - name: Ajouter la clé SSH à l'utilisateur
+      ansible.posix.authorized_key:
+        user: ubuntu
+        state: present
+        key: "{{ lookup('file', '/home/julien/.ssh/ansible/ansible_key.pub') }}"
