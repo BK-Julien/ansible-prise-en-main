@@ -1,0 +1,47 @@
+---
+- name: Configuration IP statique sur Rocky Linux avec nmcli
+  hosts: srv-bdd
+  become: yes
+  vars:
+    # Variables par défaut - à adapter selon tes besoins
+    network_interface: "ens160"
+    dns_servers: "8.8.8.8 8.8.4.4"
+    
+  tasks:
+    - name: "Étape 1 - Modifier la configuration réseau de {{ network_interface }}"
+      community.general.nmcli:
+        conn_name: "{{ network_interface }}"
+        type: ethernet
+        ip4: "{{ static_ip }}/{{ subnet_mask }}"
+        gw4: "{{ gateway }}"
+        dns4: "{{ dns_servers }}"
+        method4: manual
+        state: present
+      register: nmcli_modify_result
+      
+    - name: "Étape 2 - Recharger les configurations NetworkManager"
+      ansible.builtin.command: nmcli connection reload
+      register: nmcli_reload_result
+      
+    - name: "Étape 3 - Activer la connexion {{ network_interface }}"
+      community.general.nmcli:
+        conn_name: "{{ network_interface }}"
+        state: up
+      register: nmcli_up_result
+      
+    - name: Vérifier la nouvelle configuration IP
+      ansible.builtin.command: ip addr show {{ network_interface }}
+      register: ip_verification
+      
+    - name: Afficher la configuration réseau actuelle
+      ansible.builtin.debug:
+        msg: "Configuration réseau pour {{ inventory_hostname }} : {{ ip_verification.stdout_lines }}"
+        
+    - name: Test de connectivité - Ping gateway
+      ansible.builtin.command: ping -c 3 {{ gateway }}
+      register: ping_gateway
+      ignore_errors: yes
+      
+    - name: Résultat du test de connectivité
+      ansible.builtin.debug:
+        msg: "Test ping gateway {{ gateway }} : {{ 'SUCCÈS' if ping_gateway.rc == 0 else 'ÉCHEC' }}"

@@ -8,7 +8,7 @@
     network_config:
       host2:
         interface: "ens160"
-        ip: "10.19.97.5/29"
+        ip: "10.19.97.6/29"
         gateway: "10.19.97.2"
         dns: "8.8.8.8 8.8.4.4"
           #  host1:
@@ -58,10 +58,10 @@
       changed_when: step1_modify.rc == 0
 
     # Étape 2: Recharger les configurations (ta deuxième commande)
-    - name: "Étape 2/3: Recharger les configurations NetworkManager"
-      command: nmcli c reload
-      register: step2_reload
-      changed_when: step2_reload.rc == 0
+    # - name: "Étape 2/3: Recharger les configurations NetworkManager"
+    #  command: nmcli c reload
+    #  register: step2_reload
+    #  changed_when: step2_reload.rc == 0
 
     # Étape 3: Activer la connexion (ta troisième commande)
     - name: "Étape 3/3: Activer la connexion {{ network_config[inventory_hostname]['interface'] }}"
