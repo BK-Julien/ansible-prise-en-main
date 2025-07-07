@@ -1,0 +1,27 @@
+# Playbook de rollback en cas de problème
+- name: Rollback en DHCP (si nécessaire)
+  hosts: rocky_servers
+  become: yes
+  tasks:
+    - name: Confirmer le rollback
+      pause:
+        prompt: "Êtes-vous sûr de vouloir revenir en DHCP sur {{ inventory_hostname }} ? (yes/no)"
+      register: confirm_rollback
+      when: rollback is defined and rollback
+
+    - name: Remettre en DHCP
+      command: >
+        nmcli c m {{ network_config[inventory_hostname]['interface'] }}
+        ipv4.method auto
+        ipv4.addresses ""
+        ipv4.gateway ""
+        ipv4.dns ""
+      when: rollback is defined and rollback and confirm_rollback.user_input == "yes"
+
+    - name: Recharger après rollback
+      command: nmcli c reload
+      when: rollback is defined and rollback and confirm_rollback.user_input == "yes"
+
+    - name: Activer après rollback
+      command: nmcli c up {{ network_config[inventory_hostname]['interface'] }}
+      when: rollback is defined and rollback and confirm_rollback.user_input == "yes"

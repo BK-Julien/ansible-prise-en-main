@@ -1,0 +1,127 @@
+---
+- name: Configuration IP statique sur deux machines Rocky Linux
+  hosts: clusterk8s
+  become: yes
+  strategy: free  # Exécution en parallèle sur les deux machines
+  vars:
+    # Configuration réseau pour chaque machine
+    network_config:
+      host2:
+        interface: "ens160"
+        ip: "10.19.97.5/29"
+        gateway: "10.19.97.2"
+        dns: "8.8.8.8 8.8.4.4"
+          #  host1:
+          #  interface: "inconnu"
+          #  ip: "x.x.x.x/x"
+          #  gateway: "x.x.x.x"
+          #  dns: "8.8.8.8 8.8.4.4"
+
+  pre_tasks:
+    # Afficher les informations avant configuration
+    - name: Afficher la configuration actuelle
+      debug:
+        msg: |
+          =====================================
+          Configuration de {{ network_config[inventory_hostname] }}
+          =====================================
+          Interface: {{ network_config[inventory_hostname]['interface'] }}
+          Nouvelle IP: {{ network_config[inventory_hostname]['ip'] }}
+          Passerelle: {{ network_config[inventory_hostname]['gateway'] }}
+          DNS: {{ network_config[inventory_hostname]['dns'] }}
+          =====================================
+
+    # Vérifier l'état actuel de NetworkManager
+    - name: Vérifier l'état de NetworkManager
+      systemd:
+        name: NetworkManager
+        state: started
+        enabled: yes
+
+    # Sauvegarder la configuration actuelle
+    - name: Sauvegarder la configuration actuelle
+      shell: |
+        nmcli c show {{ network_config[inventory_hostname]['interface'] }} > /tmp/network_backup_{{ ansible_date_time.epoch }}.txt
+        ip addr show {{ network_config[inventory_hostname]['interface'] }} >> /tmp/network_backup_{{ ansible_date_time.epoch }}.txt
+      ignore_errors: yes
+
+  tasks:
+    # Étape 1: Modifier la connexion (ta première commande)
+    - name: "Étape 1/3: Modifier la connexion {{ network_config[inventory_hostname]['interface'] }}"
+      command: >
+        nmcli c m {{ network_config[inventory_hostname]['interface'] }}
+        ipv4.addresses {{ network_config[inventory_hostname]['ip'] }}
+        ipv4.gateway {{ network_config[inventory_hostname]['gateway'] }}
+        ipv4.dns "{{ network_config[inventory_hostname]['dns'] }}"
+        ipv4.method manual
+      register: step1_modify
+      changed_when: step1_modify.rc == 0
+
+    # Étape 2: Recharger les configurations (ta deuxième commande)
+    - name: "Étape 2/3: Recharger les configurations NetworkManager"
+      command: nmcli c reload
+      register: step2_reload
+      changed_when: step2_reload.rc == 0
+
+    # Étape 3: Activer la connexion (ta troisième commande)
+    - name: "Étape 3/3: Activer la connexion {{ network_config[inventory_hostname]['interface'] }}"
+      command: nmcli c up {{ network_config[inventory_hostname]['interface'] }}
+      register: step3_up
+      changed_when: step3_up.rc == 0
+
+    # Attendre la stabilisation
+    - name: Attendre la stabilisation de la connexion
+      wait_for:
+        timeout: 10
+      delegate_to: localhost
+
+  post_tasks:
+    # Vérifications post-configuration
+    - name: Vérifier l'IP configurée
+      command: ip addr show {{ network_config[inventory_hostname]['interface'] }}
+      register: ip_verification
+      changed_when: false
+
+    # Test de connectivité vers la passerelle
+    - name: Test de ping vers la passerelle
+      command: ping -c 3 {{ network_config[inventory_hostname]['gateway'] }}
+      register: gateway_ping
+      changed_when: false
+      ignore_errors: yes
+
+    # Test de connectivité internet
+    - name: Test de connectivité internet
+      command: ping -c 3 8.8.8.8
+      register: internet_ping
+      changed_when: false
+      ignore_errors: yes
+
+    # Vérifier les DNS
+    - name: Test de résolution DNS
+      command: nslookup google.com
+      register: dns_test
+      changed_when: false
+      ignore_errors: yes
+
+    # Rapport final pour chaque machine
+    - name: Rapport final de configuration
+      debug:
+        msg: |
+          ==========================================
+          RAPPORT FINAL - {{ inventory_hostname }}
+          ==========================================
+          Interface: {{ network_config[inventory_hostname]['interface'] }}
+          IP cible: {{ network_config[inventory_hostname]['ip'] }}
+          
+          RÉSULTATS DES ÉTAPES:
+          1. Modification: {{ 'OK' if step1_modify.rc == 0 else 'ECHEC' }}
+          2. Rechargement: {{ 'OK' if step2_reload.rc == 0 else 'ECHEC' }}
+          3. Activation: {{ 'OK' if step3_up.rc == 0 else 'ECHEC' }}
+          
+          TESTS DE CONNECTIVITÉ:
+          - Ping passerelle: {{ 'OK' if gateway_ping.rc == 0 else 'ECHEC' }}
+          - Ping internet: {{ 'OK' if internet_ping.rc == 0 else 'ECHEC' }}
+          - Résolution DNS: {{ 'OK' if dns_test.rc == 0 else 'ECHEC' }}
+          
+          CONFIGURATION RÉUSSIE: {{ 'OUI' if (step1_modify.rc == 0 and step2_reload.rc == 0 and step3_up.rc == 0 and gateway_ping.rc == 0) else 'NON' }}
+          ==========================================

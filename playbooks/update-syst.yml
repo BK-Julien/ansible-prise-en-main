@@ -1,0 +1,11 @@
+---
+- hosts: clusterk8s
+  become: yes
+  tasks:
+    - name: Mise à jour des paquets
+      ansible.builtin.command: 
+        cmd: sudo dnf check-update
+
+    - name: Mise à niveau des paquets
+      ansible.builtin.command: 
+        cmd: sudo dnf update -y
