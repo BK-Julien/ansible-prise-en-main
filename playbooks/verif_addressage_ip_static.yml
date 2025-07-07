@@ -1,7 +1,7 @@
 ---
 # Playbook pour vérifications sur les deux machines
 - name: Vérifications post-configuration
-  hosts: clusterk8s
+  hosts: srv-bdd
   become: yes
   tasks:
     # Afficher les connexions actives
@@ -15,15 +15,3 @@
       command: ip route show
       register: routing_table
       changed_when: false
-
-    # Résumé des deux machines
-    - name: Résumé des configurations
-      debug:
-        msg: |
-          ===== {{ inventory_hostname }} =====
-          Connexions actives:
-          {{ active_connections.stdout }}
-          
-          Table de routage:
-          {{ routing_table.stdout }}
-          ================================
