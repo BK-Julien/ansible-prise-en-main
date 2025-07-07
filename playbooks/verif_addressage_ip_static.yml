@@ -1,0 +1,29 @@
+---
+# Playbook pour vérifications sur les deux machines
+- name: Vérifications post-configuration
+  hosts: clusterk8s
+  become: yes
+  tasks:
+    # Afficher les connexions actives
+    - name: Afficher les connexions actives
+      command: nmcli c show --active
+      register: active_connections
+      changed_when: false
+
+    # Afficher la table de routage
+    - name: Afficher la table de routage
+      command: ip route show
+      register: routing_table
+      changed_when: false
+
+    # Résumé des deux machines
+    - name: Résumé des configurations
+      debug:
+        msg: |
+          ===== {{ inventory_hostname }} =====
+          Connexions actives:
+          {{ active_connections.stdout }}
+          
+          Table de routage:
+          {{ routing_table.stdout }}
+          ================================
